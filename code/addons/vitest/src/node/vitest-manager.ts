@@ -13,9 +13,13 @@ import path, { dirname, join, normalize, resolve } from 'pathe';
 // eslint-disable-next-line depend/ban-dependencies
 import slash from 'slash';
 
-import { COVERAGE_DIRECTORY, STORYBOOK_TEST_PROVIDE_KEY } from '../constants.ts';
+import {
+  COVERAGE_DIRECTORY,
+  STORYBOOK_TEST_PROVIDE_KEY,
+  STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY,
+} from '../constants.ts';
 import { log } from '../logger.ts';
-import type { TriggerRunEvent } from '../types.ts';
+import type { GlobalsByStoryId, TriggerRunEvent } from '../types.ts';
 import type { StorybookCoverageReporterOptions } from './coverage-reporter.ts';
 import { StorybookReporter } from './reporter.ts';
 import type { TestManager } from './test-manager.ts';
@@ -389,6 +393,10 @@ export class VitestManager {
     this.vitest?.provide(STORYBOOK_TEST_PROVIDE_KEY, this.getCurrentRunConfig());
   }
 
+  private provideStoryGlobals(globalsByStoryId?: GlobalsByStoryId) {
+    this.vitest?.provide(STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY, globalsByStoryId ?? {});
+  }
+
   async runTests(runPayload: TriggerRunEvent['payload']) {
     const { watching } = this.testManager.store.getState();
     const runConfig = this.getCurrentRunConfig();
@@ -401,6 +409,7 @@ export class VitestManager {
       await this.setCoverage(coverageShouldBeEnabled);
     }
 
+    this.provideStoryGlobals(runPayload.globalsByStoryId);
     this.provideRunConfig();
 
     this.resetGlobalTestNamePattern();
@@ -545,6 +554,8 @@ export class VitestManager {
         }));
         await this.vitest!.cancelCurrentRun('keyboard-input');
         await this.runningPromise;
+        // Per-story globals belong to one triggered run; a watch rerun must not reuse them.
+        this.provideStoryGlobals();
         this.provideRunConfig();
         await this.vitest!.runTestSpecifications(filteredTestSpecifications, false);
       },

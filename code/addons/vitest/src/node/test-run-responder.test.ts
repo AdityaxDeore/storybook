@@ -66,8 +66,8 @@ async function loadResponder() {
   return import('./test-run-responder.ts');
 }
 
-function emitRequest(channel: Channel, requestId: string) {
-  channel.emit(TRIGGER_TEST_RUN_REQUEST, { requestId, actor: 'test-actor' });
+function emitRequest(channel: Channel, requestId: string, payload: Record<string, unknown> = {}) {
+  channel.emit(TRIGGER_TEST_RUN_REQUEST, { requestId, actor: 'test-actor', ...payload });
 }
 
 beforeEach(() => {
@@ -140,6 +140,23 @@ describe('wireTestRunResponder', () => {
       ])
     );
     expect(internal_UniversalStore.create).toHaveBeenCalledOnce();
+  });
+
+  it('forwards per-story globals from the request into the triggered run', async () => {
+    const { wireTestRunResponder } = await loadResponder();
+    const channel = new Channel({});
+
+    await wireTestRunResponder({ channel, options: makeOptions() });
+    emitRequest(channel, 'req-1', {
+      globalsByStoryId: { 'button--primary': { theme: 'dark' } },
+    });
+
+    await vi.waitFor(() => expect(runTestRunner).toHaveBeenCalledOnce());
+
+    const [{ initArgs }] = vi.mocked(runTestRunner).mock.calls[0];
+    expect(initArgs?.[0]?.event.payload).toMatchObject({
+      globalsByStoryId: { 'button--primary': { theme: 'dark' } },
+    });
   });
 
   it('rejects a concurrent request while a requested run is still in flight', async () => {

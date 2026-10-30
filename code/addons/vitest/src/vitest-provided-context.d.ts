@@ -8,7 +8,9 @@ import type {
   STORYBOOK_TEST_FEATURES_PROVIDE_KEY,
   STORYBOOK_TEST_INITIAL_GLOBALS_PROVIDE_KEY,
   STORYBOOK_TEST_PROVIDE_KEY,
+  STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY,
 } from './constants.ts';
+import type { GlobalsByStoryId } from './types.ts';
 
 declare module 'vitest' {
   interface ProvidedContext {
@@ -17,5 +19,6 @@ declare module 'vitest' {
     [STORYBOOK_CORE_GHOST_STORIES_PROVIDE_KEY]: boolean;
     [STORYBOOK_CORE_RENDER_ANALYSIS_PROVIDE_KEY]: boolean;
     [STORYBOOK_TEST_INITIAL_GLOBALS_PROVIDE_KEY]: Record<string, unknown>;
+    [STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY]: GlobalsByStoryId;
   }
 }

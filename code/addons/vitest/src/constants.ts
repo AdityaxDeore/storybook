@@ -1,6 +1,6 @@
 import type { StoreOptions } from 'storybook/internal/types';
 
-import type { CurrentRun, RunTrigger, StoreState } from './types.ts';
+import type { CurrentRun, GlobalsByStoryId, RunTrigger, StoreState } from './types.ts';
 
 export { PANEL_ID as COMPONENT_TESTING_PANEL_ID } from '../../../core/src/component-testing/constants.ts';
 export {
@@ -70,6 +70,7 @@ export const STORYBOOK_TEST_PROVIDE_KEY = 'storybook/test-provided';
 export const STORYBOOK_CORE_GHOST_STORIES_PROVIDE_KEY = 'storybook/core-ghost-stories';
 export const STORYBOOK_CORE_RENDER_ANALYSIS_PROVIDE_KEY = 'storybook/core-render-analysis';
 export const STORYBOOK_TEST_INITIAL_GLOBALS_PROVIDE_KEY = 'storybook/test-initial-globals';
+export const STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY = 'storybook/test-story-globals';
 export const STORYBOOK_TEST_FEATURES_PROVIDE_KEY = 'storybook/test-features';
 
 // Channel event names for programmatic test triggering
@@ -81,6 +82,7 @@ export type TriggerTestRunRequestPayload = {
   actor: string;
   storyIds?: string[];
   config?: Record<string, unknown>;
+  globalsByStoryId?: GlobalsByStoryId;
 };
 
 export type TestRunResult = CurrentRun;

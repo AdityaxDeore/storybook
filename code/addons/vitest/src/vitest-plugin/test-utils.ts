@@ -10,7 +10,9 @@ import {
   STORYBOOK_CORE_RENDER_ANALYSIS_PROVIDE_KEY,
   STORYBOOK_TEST_INITIAL_GLOBALS_PROVIDE_KEY,
   STORYBOOK_TEST_PROVIDE_KEY,
+  STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY,
 } from '../constants.ts';
+import type { GlobalsByStoryId } from '../types.ts';
 import { composeInitialGlobals } from './compose-initial-globals.ts';
 import { setViewport } from './viewports.ts';
 
@@ -92,9 +94,18 @@ export const testStory = ({
       // Standalone Vitest runs might not provide project initial globals.
     }
 
+    // Globals requested for this story in this run (e.g. via the `test-run` tool).
+    let globalsByStoryId: GlobalsByStoryId = {};
+    try {
+      globalsByStoryId = inject(STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY) ?? {};
+    } catch {
+      // Standalone Vitest runs might not provide per-story globals.
+    }
+
     const shouldRunA11yTests = !!runConfig.a11y;
     const initialGlobals = composeInitialGlobals({
       userInitialGlobals,
+      storyGlobals: globalsByStoryId[storyId] ?? {},
       runConfig,
       ghostStoriesEnabled,
       renderAnalysisEnabled,

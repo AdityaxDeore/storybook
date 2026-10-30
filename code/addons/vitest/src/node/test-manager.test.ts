@@ -16,6 +16,7 @@ import {
   STATUS_TYPE_ID_A11Y,
   STATUS_TYPE_ID_COMPONENT_TEST,
   STORYBOOK_TEST_PROVIDE_KEY,
+  STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY,
   storeOptions,
 } from '../constants.ts';
 import type { StoreEvent, StoreState } from '../types.ts';
@@ -332,6 +333,68 @@ describe('TestManager', () => {
       coverage: false,
       a11y: true,
     });
+    expect(vitest.runTestSpecifications).toHaveBeenLastCalledWith(tests.slice(0, 1), false);
+  });
+
+  it('should provide per-story globals before running tests', async () => {
+    vitest.globTestSpecifications.mockImplementation(() => tests);
+    const testManager = await startWithIndex();
+
+    await testManager.handleTriggerRunEvent({
+      type: 'TRIGGER_RUN',
+      payload: {
+        triggeredBy: 'external:actor',
+        globalsByStoryId: { 'story--one': { theme: 'dark' } },
+      },
+    });
+
+    expect(vitest.provide).toHaveBeenCalledWith(STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY, {
+      'story--one': { theme: 'dark' },
+    });
+  });
+
+  it('should clear provided per-story globals before watch-triggered reruns', async () => {
+    vitest.globTestSpecifications.mockImplementation(() => tests);
+    vitest.projects = [
+      {
+        config: {
+          env: { __STORYBOOK_URL__: 'http://localhost:6006' },
+          root: process.cwd(),
+          setupFiles: [],
+        },
+        matchesTestGlob: vi.fn(),
+        vite: {
+          moduleGraph: {
+            getModuleById: vi.fn(),
+            getModulesByFile: vi.fn(() => []),
+            invalidateModule: vi.fn(),
+          },
+          transformRequest: vi.fn(),
+        },
+      },
+    ] as any;
+
+    const testManager = await startWithIndex();
+
+    await testManager.handleTriggerRunEvent({
+      type: 'TRIGGER_RUN',
+      payload: {
+        triggeredBy: 'external:actor',
+        globalsByStoryId: { 'story--one': { theme: 'dark' } },
+      },
+    });
+
+    vitest.provide.mockClear();
+    mockStore.setState((s) => ({
+      ...s,
+      watching: true,
+    }));
+
+    vi.spyOn(testManager.vitestManager as any, 'getTestDependencies').mockResolvedValue(new Set());
+
+    await testManager.vitestManager.runAffectedTestsAfterChange(tests[0].moduleId, 'change');
+
+    expect(vitest.provide).toHaveBeenCalledWith(STORYBOOK_TEST_STORY_GLOBALS_PROVIDE_KEY, {});
     expect(vitest.runTestSpecifications).toHaveBeenLastCalledWith(tests.slice(0, 1), false);
   });
 

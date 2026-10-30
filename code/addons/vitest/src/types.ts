@@ -23,6 +23,8 @@ export type ErrorLike = {
 
 export type RunConfig = Record<string, unknown>;
 
+export type GlobalsByStoryId = Record<StoryId, Record<string, unknown>>;
+
 export type RunTrigger =
   | 'run-all'
   | 'global'
@@ -86,6 +88,7 @@ export type TriggerRunEvent = {
     storyIds?: string[] | undefined;
     triggeredBy: RunTrigger;
     configOverride?: RunConfig;
+    globalsByStoryId?: GlobalsByStoryId;
   };
 };
 

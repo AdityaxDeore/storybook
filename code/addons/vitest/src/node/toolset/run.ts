@@ -9,6 +9,7 @@ import { OpenServiceTestRunTimeoutError } from 'storybook/internal/server-errors
 import type { StoryIndex } from 'storybook/internal/types';
 
 import { TRIGGER_TEST_RUN_REQUEST, TRIGGER_TEST_RUN_RESPONSE } from '../../constants.ts';
+import type { GlobalsByStoryId } from '../../types.ts';
 import type { TestRunOutput, TestRunResult } from './definition.ts';
 
 /** Default wait for a matching channel response before failing the queued run. */
@@ -59,6 +60,7 @@ export type TriggerTestRunParams = {
   responseEvent: string;
   storyIds?: string[];
   config?: Record<string, unknown>;
+  globalsByStoryId?: GlobalsByStoryId;
   actor: string;
   /** Max wait for a matching response. Defaults to {@link DEFAULT_TEST_RUN_TIMEOUT_MS}. */
   timeoutMs?: number;
@@ -75,6 +77,7 @@ export function triggerTestRun({
   responseEvent,
   storyIds,
   config,
+  globalsByStoryId,
   actor,
   timeoutMs = DEFAULT_TEST_RUN_TIMEOUT_MS,
 }: TriggerTestRunParams): Promise<TriggerTestRunResponse> {
@@ -132,6 +135,7 @@ export function triggerTestRun({
         actor,
         storyIds,
         config,
+        globalsByStoryId,
       });
     } catch (error) {
       settle(() => reject(error instanceof Error ? error : new Error(String(error))));
@@ -166,6 +170,7 @@ export async function runStoryTests({
   timeoutMs = DEFAULT_TEST_RUN_TIMEOUT_MS,
 }: RunStoryTestsParams): Promise<TestRunOutput> {
   let storyIds: string[] | undefined;
+  let globalsByStoryId: GlobalsByStoryId | undefined;
 
   if (stories) {
     const index = await getIndex();
@@ -190,6 +195,12 @@ export async function runStoryTests({
     }
 
     storyIds = found.map((story) => story.entry.id);
+    globalsByStoryId = {};
+    for (const story of found) {
+      if (story.input.globals) {
+        globalsByStoryId[story.entry.id] = story.input.globals;
+      }
+    }
   }
 
   let response: TriggerTestRunResponse;
@@ -200,6 +211,7 @@ export async function runStoryTests({
       responseEvent,
       storyIds,
       config: { a11y },
+      globalsByStoryId,
       actor,
       timeoutMs,
     });

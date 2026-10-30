@@ -53,6 +53,15 @@ const index: StoryIndex = {
       importPath: './src/Button.stories.tsx',
       tags: ['story'],
     },
+    'button--secondary': {
+      type: 'story',
+      subtype: 'story',
+      id: 'button--secondary',
+      name: 'Secondary',
+      title: 'Button',
+      importPath: './src/Button.stories.tsx',
+      tags: ['story'],
+    },
   },
 };
 
@@ -171,6 +180,65 @@ describe('runStoryTests', () => {
     });
 
     expect(result).toEqual({ status: 'completed', result: sampleResult });
+  });
+
+  it('carries per-story globals keyed by resolved story id in the test run request', async () => {
+    const channel = createMockChannel();
+    let emitted: unknown;
+    channel.emit = (event, payload) => {
+      if (event === TRIGGER_TEST_RUN_REQUEST) {
+        emitted = payload;
+        const { requestId } = payload as { requestId: string };
+        queueMicrotask(() =>
+          respond(channel, {
+            requestId,
+            status: 'completed',
+            result: sampleResult,
+          })
+        );
+      }
+    };
+
+    const result = await runStoryTests({
+      channel,
+      getIndex: async () => index,
+      stories: [
+        { storyId: 'button--primary', globals: { theme: 'dark' } },
+        { storyId: 'button--secondary' },
+      ],
+    });
+
+    expect(result).toEqual({ status: 'completed', result: sampleResult });
+    expect(emitted).toMatchObject({
+      storyIds: ['button--primary', 'button--secondary'],
+      globalsByStoryId: { 'button--primary': { theme: 'dark' } },
+    });
+  });
+
+  it('sends no per-story globals when running all stories', async () => {
+    const channel = createMockChannel();
+    let emitted: unknown;
+    channel.emit = (event, payload) => {
+      if (event === TRIGGER_TEST_RUN_REQUEST) {
+        emitted = payload;
+        const { requestId } = payload as { requestId: string };
+        queueMicrotask(() =>
+          respond(channel, {
+            requestId,
+            status: 'completed',
+            result: sampleResult,
+          })
+        );
+      }
+    };
+
+    const result = await runStoryTests({
+      channel,
+      getIndex: async () => index,
+    });
+
+    expect(result).toEqual({ status: 'completed', result: sampleResult });
+    expect(emitted).toMatchObject({ storyIds: undefined, globalsByStoryId: undefined });
   });
 
   it('maps an error channel response', async () => {
